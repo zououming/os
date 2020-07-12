@@ -1,0 +1,4 @@
+-frame 10
+-model car/test
+-collect 1
+-hsv (setting/hsv.xml)
