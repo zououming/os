@@ -5,6 +5,7 @@ import cv2
 def serial_init(port):
     serial_ard = serial.Serial(port, 9600, timeout=1)
     serial_ard.flushInput()
+
     return serial_ard
 
 def serial_send(serial_ard, message):
@@ -15,13 +16,14 @@ def serial_send(serial_ard, message):
     except:
         print("Failed to send.")
         serial_ard.close()
-    serial_ard.flushInput()
 
 
 def serial_read(serial_ard):
-    serial_message = serial_ard.read(5)
+    serial_message = serial_ard.read(10)
+    serial_ard.flushInput()
+
     if len(serial_message):
-        print("read", serial_message.decode('utf-8'))
+        print("read ", serial_message.decode('utf-8'))
         return 1
     else:
         return 0
