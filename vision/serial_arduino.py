@@ -3,7 +3,7 @@ import serial
 import cv2
 
 def serial_init(port):
-    serial_ard = serial.Serial(port, 9600, timeout=1)
+    serial_ard = serial.Serial(port, 9600, timeout=0.01)
     serial_ard.flushInput()
 
     return serial_ard

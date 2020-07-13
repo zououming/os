@@ -114,6 +114,7 @@ def test(frame_threshold):
         if sum(color_direction_count) >= frame_threshold / 2:
             frame_count = 0
             max_index = np.argmax(color_direction_count)
+            print(max_index)
             print(color_direction_map[max_index])
             for i in range(4):
                 color_direction_count[i] = 0
@@ -133,9 +134,16 @@ def car(frame_threshold, serial):
         os.system("mkdir img")
         os.system("rm -r img/*")
 
+    frame_count = 0
     while(capture.isOpened()):
         ret, frame = capture.read()
 
+        if frame_count > frame_threshold:
+            frame_count = 0
+            print("no arrow!")
+            for i in range(4):
+                color_direction_count[i] = 0
+        # hsv_img = cv2.resize(frame, (200, 150))
         hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         hsv_green = cv2.inRange(hsv_img, (green_lower[0], green_lower[1], green_lower[2]),
@@ -175,14 +183,17 @@ def car(frame_threshold, serial):
             collect_count += 1
             cv2.imwrite(img_path, frame)
 
-        if max(color_direction_count) >= frame_threshold:
+        if sum(color_direction_count) > frame_threshold:
             max_index = np.argmax(color_direction_count)
-            if ser.serial_read(serial):
-                ser.serial_send(serial, str(max_index))
-                print(color_direction_map[max_index])
-                for i in range(4):
-                    color_direction_count[i] = 0
+            # if ser.serial_read(serial):
+            ser.serial_send(serial, str(max_index))
 
+        if ser.serial_read(serial):
+            for i in range(4):
+                color_direction_count[i] = 0
+
+        max_index = np.argmax(color_direction_count)
+        print(color_direction_map[max_index])
         cv2.waitKey(1)
 
 green_lower = [35, 43, 36]

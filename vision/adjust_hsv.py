@@ -31,14 +31,9 @@ def change_trackbar(self):
     pass
 
 def adjust_hsv(path):
+    global green_lower, green_upper, red_lower, red_upper
     adjust_window = "adjust HSV"
     cv2.namedWindow(adjust_window)
-
-    green_lower = [43, 108, 55]
-    green_upper = [82, 255, 255]
-
-    red_lower = [0, 156, 91, 41]
-    red_upper = [10, 180, 255, 255]
 
     cv2.createTrackbar("green lower H", adjust_window, green_lower[0], 180, change_trackbar)
     cv2.createTrackbar("green lower S", adjust_window, green_lower[1], 255, change_trackbar)
@@ -91,8 +86,8 @@ def adjust_hsv(path):
             hsv_red2 = cv2.inRange(hsv_img, (red_lower[1], red_lower[2], red_lower[3]),
                                    (red_upper[1], red_upper[2], red_upper[3]))
             hsv_red = cv2.bitwise_or(hsv_red1, hsv_red2)
-            print(red_lower)
-            print(red_upper)
+            # print(red_lower)
+            # print(red_upper)
             cv2.imshow("green", hsv_green)
             cv2.imshow("red", hsv_red)
 
@@ -109,7 +104,15 @@ def adjust_hsv(path):
 
     return green_lower, green_upper, red_lower, red_upper
 
+green_lower = [43, 108, 55]
+green_upper = [82, 255, 255]
+
+red_lower = [0, 156, 91, 41]
+red_upper = [10, 180, 255, 255]
+
 if __name__ == '__main__':
+    green_lower, green_upper, red_lower, red_upper = read_xml('setting/hsv.xml')
+    green_lower, green_upper, red_lower, red_upper = to_list(green_lower, green_upper, red_lower, red_upper)
     green_lower, green_upper, red_lower, red_upper = adjust_hsv('./img')
     save = input('save it? y/n: ')
     if save == 'y':
