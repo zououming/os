@@ -187,10 +187,9 @@ def car(frame_threshold, serial):
             max_index = np.argmax(color_direction_count)
             # if ser.serial_read(serial):
             ser.serial_send(serial, str(max_index))
-
-        if ser.serial_read(serial):
-            for i in range(4):
-                color_direction_count[i] = 0
+            if ser.serial_read(serial):
+                for i in range(4):
+                    color_direction_count[i] = 0
 
         max_index = np.argmax(color_direction_count)
         print(color_direction_map[max_index])

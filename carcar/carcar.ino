@@ -14,13 +14,13 @@
 #define left_echo 12
 
 #define turn_left_delay 750            // 转向延迟
-#define turn_right_delay 800
-#define adj_dis 3                 // 调整方向距离阈值
+#define turn_right_delay 670
+#define adj_dis 2                 // 调整方向距离阈值
 #define adj_num 1                 // 调整方向条件
-#define adj_delay 10              // 调整方向延迟
-#define turn_dis 30               // 判断拐角距离阈值
-#define send_delay 10             // 接受数据等待时间
-#define corner_delay 150          // 进入拐角的延迟 
+#define adj_delay 20              // 调整方向延迟
+#define turn_dis 70               // 判断拐角距离阈值
+#define send_delay 50             // 接受数据等待时间
+#define corner_delay 200          // 进入拐角的延迟 
 #define after_turn_stop_delay 100 
 #define after_turn_delay 1000      // 转向后延迟
 
@@ -75,8 +75,13 @@ void Tright()
 bool adjust_direction()
 {
   float error = now_distance[default_direction] - turn_distance;
+//  float error = now_distance[left] - now_distance[right];
 
-  if ( (error < -adj_dis && error > -turn_dis) || now_distance[default_direction] == -1){
+  if (now_distance[left] == -1)
+    Adj_right();
+  else if (now_distance[right] == -1) 
+    Adj_left();
+  else if (error < -adj_dis && error > -turn_dis){
     if (default_direction == right)
       Adj_left();
     else if (default_direction == left)
@@ -98,10 +103,9 @@ void Adj_left()
   analogWrite(rightpow, 110);//右 170
 //  delay(adj_delay);
   while (count < adj_num){
+    if (is_corner()) break;
     delay(adj_delay);
     update_distance();
-    if (is_corner()) break;
-    
     if (last_distance[default_direction] - now_distance[default_direction] < 0)
       count++;
     else if (last_distance[default_direction] - now_distance[default_direction] > turn_dis)
@@ -119,9 +123,9 @@ void Adj_right()
   analogWrite(rightpow, 110);//右 170
 //  delay(adj_delay);
   while (count < adj_num){
+    if (is_corner()) break;
     delay(adj_delay);
     update_distance();
-    if (is_corner()) break;
     if (last_distance[default_direction] - now_distance[default_direction] < 0)
       count++;
     else if (last_distance[default_direction] - now_distance[default_direction] > turn_dis)
@@ -186,9 +190,7 @@ float Ultrasonic(int Trig, int Echo)
 
 bool is_corner()
 {
-//  if (now_distance[left] == -1 || now_distance[right] == -1)
-//    return 1;
-  if (now_distance[left] >= turn_dis || now_distance[right] >= turn_dis)
+  if (now_distance[left] >= turn_dis && now_distance[right] >= turn_dis)
     return 1;
     
   return 0;
@@ -218,25 +220,26 @@ String Uart()
       while (Serial.available())
       {
         b = Serial.read();
-        if (b == '#')
-          break; 
+        if (b == '#'){
+          Serial.flush();
+          return c;
+        }
         c += b;
       }
-    Serial.flush();
     }
   }
 
-  return c;
+  return "";
 }
 
 void turn()
-{
-//  String response;
-
+{ 
   response = Uart();
-  
+  clear_buffer();
   delay(corner_delay);
+  
   stop();
+  response = Uart();
 
   while (response.length() == 0){
     delay(send_delay);
@@ -269,7 +272,10 @@ void turn()
     while(1)
       Tright();
   }
+  
   Send();
+  clear_buffer();
+  
   stop();
   delay(after_turn_stop_delay);
   go_straight();
@@ -292,7 +298,7 @@ void setup() {
   
   for (int i = 0; i < 3; i++)
     update_distance();
-    
+  Send();
   go_straight();
   update_distance();
   turn_distance = now_distance[default_direction];
@@ -301,10 +307,9 @@ void setup() {
 void loop() {
   go_straight();
   update_distance();
+  adjust_direction();
   if (is_corner())
     turn();
-  else
-    adjust_direction();
 
 //   Tright();
 //   delay(turn_delay);
