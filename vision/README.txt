@@ -1,4 +1,4 @@
 -frame 10
 -model car/test
--collect 1
+-collect
 -hsv (setting/hsv.xml)

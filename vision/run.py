@@ -22,7 +22,6 @@ def set_parameter():
                     model = sys.argv[i+1]
                 elif option == "collect":
                     collect_flag = 1
-                    collect_time = float(sys.argv[i+1])
                 elif option == "hsv":
                     hsv_flag = True
                     # xml_path = sys.argv[i+1]
@@ -94,57 +93,12 @@ def test(frame_threshold):
         red_contours.sort(key=get_cnt_area, reverse=True)
         green_contours.sort(key=get_cnt_area, reverse=True)
 
-        color = ""
-        contour = []
-        box = []
-
-        for red_contour in red_contours:
-            if cv2.contourArea(red_contour) < 2000:
-                break
-            ellipse = cv2.fitEllipse(red_contour)
-            rect = cv2.minAreaRect(cv2.boxPoints(ellipse))
-            box = np.int0(cv2.boxPoints(rect))
-
-            min_index = box.min(0)
-            max_index = box.max(0)
-            img = frame[min_index[1]:max_index[1], min_index[0]:max_index[0]]
-            shape = np.shape(img)
-
-            # img_path = "img/" + str(collect_count) + ".jpg"
-            # cv2.imwrite(img_path, img)
-
-            if shape[0] == 0 or shape[1] == 0 or judge.arrow_judge(img, arrow_svm) is False:
-                continue
-
-            color = "red"
-            contour = red_contour
-            cv2.imshow("arrow", img)
-            break
-
-        for green_contour in green_contours:
-            if cv2.contourArea(green_contour) < 2000:
-                break
-            ellipse = cv2.fitEllipse(green_contour)
-            rect = cv2.minAreaRect(cv2.boxPoints(ellipse))
-            box = np.int0(cv2.boxPoints(rect))
-
-            min_index = box.min(0)
-            max_index = box.max(0)
-            img = frame[min_index[1]:max_index[1], min_index[0]:max_index[0]]
-            shape = np.shape(img)
-
-            # img_path = "img/" + str(collect_count) + ".jpg"
-            # cv2.imwrite(img_path, img)
-
-            if shape[0] == 0 or shape[1] == 0 or judge.arrow_judge(img, arrow_svm) is False:
-                continue
-            color = "green"
-            contour = green_contour
-            cv2.imshow("arrow", img)
-            break
+        color, contour, box, arrow_img = judge.find_arrow(red_contours, green_contours, frame, arrow_svm)
 
         if len(contour) == 0:
             continue
+
+        cv2.imshow("arrow", arrow_img)
 
         k, b = judge.get_line(box)
         direction = judge.get_direction(contour, k, b)
@@ -168,7 +122,6 @@ def test(frame_threshold):
 
 def car(frame_threshold, serial):
     global green_lower, green_upper, red_lower, red_upper, collect_flag, collect_time
-    frame_count = 0
     collect_count = 0
     color_direction_count = np.zeros(4)
     color_direction_map = ["green left", "green right", "red left", "red right"]
@@ -179,22 +132,9 @@ def car(frame_threshold, serial):
     if collect_flag:
         os.system("mkdir img")
         os.system("rm -r img/*")
-        last_time = time.time()
 
     while(capture.isOpened()):
         ret, frame = capture.read()
-
-        if collect_flag and time.time() - last_time >= collect_time:
-            img_path = "img/" + str(collect_count) + ".jpg"
-            cv2.imwrite(img_path, frame)
-            print("collect:",img_path)
-            collect_count += 1
-            last_time = time.time()
-
-        frame_count += 1
-        if frame_count > frame_threshold:
-            print("No arrow!")
-            frame_count = 0
 
         hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -213,55 +153,11 @@ def car(frame_threshold, serial):
         red_contours.sort(key=get_cnt_area, reverse=True)
         green_contours.sort(key=get_cnt_area, reverse=True)
 
-        color = ""
-        contour = []
-        box = []
-
-        for red_contour in red_contours:
-            if cv2.contourArea(red_contour) < 2000:
-                break
-            ellipse = cv2.fitEllipse(red_contour)
-            rect = cv2.minAreaRect(cv2.boxPoints(ellipse))
-            box = np.int0(cv2.boxPoints(rect))
-
-            min_index = box.min(0)
-            max_index = box.max(0)
-            img = frame[min_index[1]:max_index[1], min_index[0]:max_index[0]]
-            shape = np.shape(img)
-
-            # img_path = "img/" + str(collect_count) + ".jpg"
-            # cv2.imwrite(img_path, img)
-
-            if shape[0] == 0 or shape[1] == 0 or judge.arrow_judge(img, arrow_svm) is False:
-                continue
-
-            color = "red"
-            contour = red_contour
-            break
-
-        for green_contour in green_contours:
-            if cv2.contourArea(green_contour) < 2000:
-                break
-            ellipse = cv2.fitEllipse(green_contour)
-            rect = cv2.minAreaRect(cv2.boxPoints(ellipse))
-            box = np.int0(cv2.boxPoints(rect))
-
-            min_index = box.min(0)
-            max_index = box.max(0)
-            img = frame[min_index[1]:max_index[1], min_index[0]:max_index[0]]
-            shape = np.shape(img)
-
-            # img_path = "img/" + str(collect_count) + ".jpg"
-            # cv2.imwrite(img_path, img)
-
-            if shape[0] == 0 or shape[1] == 0 or judge.arrow_judge(img, arrow_svm) is False:
-                continue
-            color = "green"
-            contour = green_contour
-            break
+        color, contour, box, _ = judge.find_arrow(red_contours, green_contours, frame, arrow_svm)
 
         if len(contour) == 0:
             continue
+
         k, b = judge.get_line(box)
         direction = judge.get_direction(contour, k, b)
 
@@ -273,19 +169,19 @@ def car(frame_threshold, serial):
 
         color_direction_count[index] += 1
 
+        if collect_flag:
+            max_index = np.argmax(color_direction_count)
+            img_path = "img/" + color_direction_map[max_index] + str(collect_count) + ".jpg"
+            collect_count += 1
+            cv2.imwrite(img_path, frame)
+
         if max(color_direction_count) >= frame_threshold:
-            frame_count = 0
             max_index = np.argmax(color_direction_count)
             if ser.serial_read(serial):
                 ser.serial_send(serial, str(max_index))
                 print(color_direction_map[max_index])
                 for i in range(4):
                     color_direction_count[i] = 0
-
-        max_index = np.argmax(color_direction_count)
-        img_path = "img/" + color_direction_map[max_index] + str(collect_count) + ".jpg"
-        collect_count += 1
-        cv2.imwrite(img_path, frame)
 
         cv2.waitKey(1)
 
@@ -296,7 +192,6 @@ red_upper = [10, 180, 255, 255]
 hsv_flag = False
 xml_path = "./setting/hsv.xml"
 collect_flag = False
-collect_time = 1
 
 if __name__ == "__main__":
     model, frame_threshold = set_parameter()
@@ -305,7 +200,7 @@ if __name__ == "__main__":
 
     if hsv_flag:
         print("read xml file:", xml_path)
-        green_lower, green_upper, red_lower, red_upper = adjust_hsv.read_xml("./setting/hsv.xml")
+        green_lower, green_upper, red_lower, red_upper = adjust_hsv.read_xml(xml_path)
         green_lower, green_upper, red_lower, red_upper = adjust_hsv.to_list(green_lower, green_upper, red_lower, red_upper)
 
     print("green lower:", green_lower)
@@ -315,7 +210,6 @@ if __name__ == "__main__":
 
     if collect_flag:
         print("collect: on")
-        print("collect time:", collect_time)
 
     if model == "test":
         test(frame_threshold)

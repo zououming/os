@@ -6,6 +6,55 @@ def get_svm(path):
     svm = cv2.ml_SVM.load(path)
     return svm
 
+def find_arrow(red_contours, green_contours, frame, arrow_svm):
+    color = ""
+    contour = []
+    arrow_box = []
+    arrow_img = []
+
+    for red_contour in red_contours:
+        if cv2.contourArea(red_contour) < 2000:
+            break
+        ellipse = cv2.fitEllipse(red_contour)
+        rect = cv2.minAreaRect(cv2.boxPoints(ellipse))
+        box = np.int0(cv2.boxPoints(rect))
+
+        min_index = box.min(0)
+        max_index = box.max(0)
+        img = frame[min_index[1]:max_index[1], min_index[0]:max_index[0]]
+        shape = np.shape(img)
+
+        if shape[0] == 0 or shape[1] == 0 or arrow_judge(img, arrow_svm) is False:
+            continue
+
+        color = "red"
+        contour = red_contour
+        arrow_box = box
+        arrow_img = img
+        break
+
+    for green_contour in green_contours:
+        if cv2.contourArea(green_contour) < 2000:
+            break
+        ellipse = cv2.fitEllipse(green_contour)
+        rect = cv2.minAreaRect(cv2.boxPoints(ellipse))
+        box = np.int0(cv2.boxPoints(rect))
+
+        min_index = box.min(0)
+        max_index = box.max(0)
+        img = frame[min_index[1]:max_index[1], min_index[0]:max_index[0]]
+        shape = np.shape(img)
+
+        if shape[0] == 0 or shape[1] == 0 or arrow_judge(img, arrow_svm) is False:
+            continue
+        color = "green"
+        contour = green_contour
+        arrow_box = box
+        arrow_img = img
+        break
+
+    return color, contour, arrow_box, arrow_img
+
 def arrow_judge(img, svm):
     img = cv2.resize(img, (64, 64))
     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)

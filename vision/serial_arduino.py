@@ -19,24 +19,17 @@ def serial_send(serial_ard, message):
 
 
 def serial_read(serial_ard):
-    serial_message = serial_ard.read(10)
+    serial_message = serial_ard.read()
     serial_ard.flushInput()
 
     if len(serial_message):
-        print("read ", serial_message.decode('utf-8'))
-        return 1
+        print("read: ", serial_message.decode('utf-8'))
+        return True
     else:
-        return 0
+        return False
 
 if __name__ == "__main__":
     ser = serial_init('/dev/ttyACM0')
-    # cv2.namedWindow("1")
-    # cv2.waitKey(1000)
     while 1:
-        read = ser.read(10).decode('utf-8')
+        read = ser.readline().decode('utf-8')
         print(read)
-        # serial_send(ser, 'the')
-        # key = cv2.waitKey(1)
-        # if key == 27:
-        #     break
-    # cv2.destroyAllWindows()
