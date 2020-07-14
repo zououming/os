@@ -13,16 +13,16 @@
 #define left_trig 13  // 左侧超声波
 #define left_echo 12
 
-#define turn_left_delay 750            // 转向延迟
-#define turn_right_delay 670
-#define adj_dis 2                 // 调整方向距离阈值
+#define turn_left_delay 850       // 转向延迟
+#define turn_right_delay 720
+#define adj_dis 2               // 调整方向距离阈值
 #define adj_num 1                 // 调整方向条件
-#define adj_delay 20              // 调整方向延迟
-#define turn_dis 70               // 判断拐角距离阈值
+#define adj_delay 30              // 调整方向延迟
+#define turn_dis 50               // 判断拐角距离阈值
 #define send_delay 50             // 接受数据等待时间
-#define corner_delay 200          // 进入拐角的延迟 
+#define corner_delay 250          // 进入拐角的延迟 
 #define after_turn_stop_delay 100 
-#define after_turn_delay 1000      // 转向后延迟
+#define after_turn_delay 950      // 转向后延迟
 
 #define left 0
 #define right 1
@@ -32,7 +32,7 @@ float last_distance[2] = {0};
 bool init_flag = true;
 
 float turn_distance;
-int default_direction = right;
+int default_direction = left;
 int default_trig;
 int default_echo;
 
@@ -76,18 +76,20 @@ bool adjust_direction()
 {
   float error = now_distance[default_direction] - turn_distance;
 //  float error = now_distance[left] - now_distance[right];
-
-  if (now_distance[left] == -1)
+//  if (is_corner()) {
+//    turn();
+//  }
+  if (now_distance[left] < adj_dis + 1 || now_distance[left] == -1)
     Adj_right();
-  else if (now_distance[right] == -1) 
+  else if (now_distance[right] < adj_dis + 1 || now_distance[right] == -1) 
     Adj_left();
-  else if (error < -adj_dis && error > -turn_dis){
+  else if (error < -adj_dis && error > -adj_dis - 10){
     if (default_direction == right)
       Adj_left();
     else if (default_direction == left)
       Adj_right();
   }
-  else if (error > adj_dis && error < turn_dis){
+  else if (error > adj_dis && error < adj_dis + 10){
     if (default_direction == right)
       Adj_right();
     else if (default_direction == left)
@@ -103,9 +105,12 @@ void Adj_left()
   analogWrite(rightpow, 110);//右 170
 //  delay(adj_delay);
   while (count < adj_num){
-    if (is_corner()) break;
     delay(adj_delay);
     update_distance();
+    if (is_corner()) {
+      go_straight();
+      turn();
+    }
     if (last_distance[default_direction] - now_distance[default_direction] < 0)
       count++;
     else if (last_distance[default_direction] - now_distance[default_direction] > turn_dis)
@@ -123,9 +128,12 @@ void Adj_right()
   analogWrite(rightpow, 110);//右 170
 //  delay(adj_delay);
   while (count < adj_num){
-    if (is_corner()) break;
     delay(adj_delay);
     update_distance();
+    if (is_corner()) {
+      go_straight();
+      turn();
+    }
     if (last_distance[default_direction] - now_distance[default_direction] < 0)
       count++;
     else if (last_distance[default_direction] - now_distance[default_direction] > turn_dis)
@@ -176,8 +184,8 @@ float Ultrasonic(int Trig, int Echo)
   digitalWrite(Trig, LOW);
   temp = float(pulseIn(Echo, HIGH));
   cm = (temp * 1 ) / 58;
-  if (cm > 1000)
-    cm = -1;
+//  if (cm > 1000)
+//    cm = -1;
 
   //  Serial.print(Echo);
   //  Serial.println();
@@ -190,7 +198,7 @@ float Ultrasonic(int Trig, int Echo)
 
 bool is_corner()
 {
-  if (now_distance[left] >= turn_dis && now_distance[right] >= turn_dis)
+  if (now_distance[left] >= turn_dis || now_distance[right] >= turn_dis)
     return 1;
     
   return 0;
@@ -235,12 +243,16 @@ String Uart()
 void turn()
 { 
   response = Uart();
-  clear_buffer();
+  
+  if (response == "2" || response == "3")
+  {
+    while(1)
+      stop();
+  }
+  
   delay(corner_delay);
   
   stop();
-  response = Uart();
-
   while (response.length() == 0){
     delay(send_delay);
     response = Uart();
@@ -249,7 +261,7 @@ void turn()
   if (response == "0") //左转
   {
     Tleft();
-    analogWrite(leftpow, 160);//左 160 6V
+    analogWrite(leftpow, 160);//左 160 8V
     analogWrite(rightpow, 170);//右 170
     delay(turn_left_delay);
     default_direction = right;
@@ -257,7 +269,7 @@ void turn()
   else if (response == "1") //右转
   {
     Tright();
-    analogWrite(leftpow, 160);//左 160 6V
+    analogWrite(leftpow, 160);//左 160 8V
     analogWrite(rightpow, 170);//右 170
     delay(turn_right_delay);
     default_direction = left;
@@ -267,20 +279,15 @@ void turn()
     while(1)
       stop();
   }
-  else 
-  {
-    while(1)
-      Tright();
-  }
-  
-  Send();
-  clear_buffer();
   
   stop();
   delay(after_turn_stop_delay);
+ 
+  Send();   
+  clear_buffer();
+  
   go_straight();
   delay(after_turn_delay);
-
   update_distance();
   turn_distance = now_distance[default_direction];
 }
@@ -307,10 +314,10 @@ void setup() {
 void loop() {
   go_straight();
   update_distance();
-  adjust_direction();
   if (is_corner())
     turn();
-
+  else adjust_direction();
+  
 //   Tright();
 //   delay(turn_delay);
 //   analogWrite(leftpow, 160);//左 160 6V

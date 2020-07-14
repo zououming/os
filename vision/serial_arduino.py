@@ -19,8 +19,8 @@ def serial_send(serial_ard, message):
 
 
 def serial_read(serial_ard):
-    serial_message = serial_ard.read()
-    serial_ard.flushInput()
+    serial_message = serial_ard.readline()
+    # serial_ard.flushInput()
 
     if len(serial_message):
         print("read: ", serial_message.decode('utf-8'))
@@ -29,7 +29,9 @@ def serial_read(serial_ard):
         return False
 
 if __name__ == "__main__":
-    ser = serial_init('/dev/ttyACM0')
+    serial_ard = serial.Serial('/dev/ttyACM0', 9600, timeout=0.5)
+    serial_ard.flushInput()
+
     while 1:
-        read = ser.readline().decode('utf-8')
+        read = serial_ard.readline().decode('utf-8')
         print(read)

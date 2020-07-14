@@ -86,8 +86,16 @@ def adjust_hsv(path):
             hsv_red2 = cv2.inRange(hsv_img, (red_lower[1], red_lower[2], red_lower[3]),
                                    (red_upper[1], red_upper[2], red_upper[3]))
             hsv_red = cv2.bitwise_or(hsv_red1, hsv_red2)
-            # print(red_lower)
-            # print(red_upper)
+
+            # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+            # kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+            #
+            # hsv_red = cv2.erode(hsv_red, kernel)
+            # hsv_green = cv2.erode(hsv_green, kernel)
+            #
+            # hsv_red = cv2.dilate(hsv_red, kernel2)
+            # hsv_green = cv2.dilate(hsv_green, kernel2)
+
             cv2.imshow("green", hsv_green)
             cv2.imshow("red", hsv_red)
 

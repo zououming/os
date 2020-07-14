@@ -10,8 +10,8 @@ import judge
 
 def set_parameter():
     global hsv_flag, xml_path, collect_flag, collect_time
-    model = "test"
-    frame_threshold = 10
+    model = "car"
+    frame_threshold = 6
     if len(sys.argv) > 1:
         for i in range(len(sys.argv)):
             if sys.argv[i].startswith("-"):
@@ -136,6 +136,15 @@ def car(frame_threshold, serial):
 
     frame_count = 0
     while(capture.isOpened()):
+        if sum(color_direction_count) > frame_threshold:
+            max_index = np.argmax(color_direction_count)
+            # if ser.serial_read(serial):
+            ser.serial_send(serial, str(max_index))
+            cv2.waitKey(1000)
+            if ser.serial_read(serial) or max_index >= 2:
+                for i in range(4):
+                    color_direction_count[i] = 0
+
         ret, frame = capture.read()
 
         if frame_count > frame_threshold:
@@ -154,6 +163,15 @@ def car(frame_threshold, serial):
         hsv_red2 = cv2.inRange(hsv_img, (red_lower[1], red_lower[2], red_lower[3]),
                                (red_upper[1], red_upper[2], red_upper[3]))
         hsv_red = cv2.bitwise_or(hsv_red1, hsv_red2)
+
+        # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        # kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+        #
+        # hsv_red = cv2.erode(hsv_red, kernel)
+        # hsv_green = cv2.erode(hsv_green, kernel)
+        #
+        # hsv_red = cv2.dilate(hsv_red, kernel2)
+        # hsv_green = cv2.dilate(hsv_green, kernel2)
 
         red_contours, _ = cv2.findContours(hsv_red, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         green_contours, _ = cv2.findContours(hsv_green, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -183,13 +201,13 @@ def car(frame_threshold, serial):
             collect_count += 1
             cv2.imwrite(img_path, frame)
 
-        if sum(color_direction_count) > frame_threshold:
-            max_index = np.argmax(color_direction_count)
-            # if ser.serial_read(serial):
-            ser.serial_send(serial, str(max_index))
-            if ser.serial_read(serial):
-                for i in range(4):
-                    color_direction_count[i] = 0
+        # if sum(color_direction_count) > frame_threshold:
+        #     max_index = np.argmax(color_direction_count)
+        #     # if ser.serial_read(serial):
+        #     ser.serial_send(serial, str(max_index))
+        #     if ser.serial_read(serial):
+        #         for i in range(4):
+        #             color_direction_count[i] = 0
 
         max_index = np.argmax(color_direction_count)
         print(color_direction_map[max_index])
