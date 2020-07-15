@@ -5,7 +5,7 @@
   <cols>1</cols>
   <dt>i</dt>
   <data>
-    36 123 51</data></green_lower>
+    25 92 19</data></green_lower>
 <green_upper type_id="opencv-matrix">
   <rows>3</rows>
   <cols>1</cols>
@@ -17,11 +17,11 @@
   <cols>1</cols>
   <dt>i</dt>
   <data>
-    0 156 83 41</data></red_lower>
+    0 161 133 42</data></red_lower>
 <red_upper type_id="opencv-matrix">
   <rows>4</rows>
   <cols>1</cols>
   <dt>i</dt>
   <data>
-    10 180 255 255</data></red_upper>
+    11 180 255 255</data></red_upper>
 </opencv_storage>
