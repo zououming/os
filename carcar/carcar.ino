@@ -113,8 +113,6 @@ void Adj_left()
     }
     if (last_distance[default_direction] - now_distance[default_direction] < 0)
       count++;
-    else if (last_distance[default_direction] - now_distance[default_direction] > turn_dis)
-      break;
   }
   turn_distance = now_distance[default_direction];
   go_straight();
@@ -136,8 +134,6 @@ void Adj_right()
     }
     if (last_distance[default_direction] - now_distance[default_direction] < 0)
       count++;
-    else if (last_distance[default_direction] - now_distance[default_direction] > turn_dis)
-      break;      
   }
   turn_distance = now_distance[default_direction];
   go_straight();
@@ -183,9 +179,9 @@ float Ultrasonic(int Trig, int Echo)
   delayMicroseconds(10);
   digitalWrite(Trig, LOW);
   temp = float(pulseIn(Echo, HIGH));
-  cm = (temp * 1 ) / 58;
-//  if (cm > 1000)
-//    cm = -1;
+  cm = temp  / 58;
+  if (cm > 1000)
+    cm = -1;
 
   //  Serial.print(Echo);
   //  Serial.println();
@@ -198,7 +194,7 @@ float Ultrasonic(int Trig, int Echo)
 
 bool is_corner()
 {
-  if (now_distance[left] >= turn_dis || now_distance[right] >= turn_dis)
+  if (now_distance[left] >= turn_dis && now_distance[right] >= turn_dis)
     return 1;
     
   return 0;
@@ -206,7 +202,7 @@ bool is_corner()
 
 char Send()
 {
-  Serial.write("r");
+  Serial.write("r\n");
   delay(send_delay);
 }
 
@@ -229,7 +225,6 @@ String Uart()
       {
         b = Serial.read();
         if (b == '#'){
-          Serial.flush();
           return c;
         }
         c += b;
@@ -251,7 +246,7 @@ void turn()
   }
   
   delay(corner_delay);
-  
+
   stop();
   while (response.length() == 0){
     delay(send_delay);
@@ -279,15 +274,20 @@ void turn()
     while(1)
       stop();
   }
-  
+  else
+  {
+    while(1)
+      Tright();
+  }
   stop();
-  delay(after_turn_stop_delay);
- 
   Send();   
-  clear_buffer();
-  
+  delay(after_turn_stop_delay);
+
   go_straight();
   delay(after_turn_delay);
+
+  clear_buffer();
+
   update_distance();
   turn_distance = now_distance[default_direction];
 }
@@ -305,10 +305,10 @@ void setup() {
   
   for (int i = 0; i < 3; i++)
     update_distance();
-  Send();
   go_straight();
   update_distance();
   turn_distance = now_distance[default_direction];
+  Send();
 }
 
 void loop() {
@@ -317,11 +317,4 @@ void loop() {
   if (is_corner())
     turn();
   else adjust_direction();
-  
-//   Tright();
-//   delay(turn_delay);
-//   analogWrite(leftpow, 160);//左 160 6V
-//   analogWrite(rightpow, 170);//右 170
-//   stop();
-//   delay(after_turn_delay);
 }

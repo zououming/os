@@ -22,11 +22,10 @@ def serial_read(serial_ard):
     serial_message = serial_ard.readline()
     # serial_ard.flushInput()
 
-    if len(serial_message):
-        print("read: ", serial_message.decode('utf-8'))
-        return True
-    else:
-        return False
+    if len(serial_message) > 0:
+        return serial_message.decode('utf-8')
+
+    return ""
 
 if __name__ == "__main__":
     serial_ard = serial.Serial('/dev/ttyACM0', 9600, timeout=0.5)

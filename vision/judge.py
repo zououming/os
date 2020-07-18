@@ -13,7 +13,7 @@ def find_arrow(red_contours, green_contours, frame, arrow_svm):
     arrow_img = []
 
     for green_contour in green_contours:
-        if cv2.contourArea(green_contour) < 2000:
+        if cv2.contourArea(green_contour) < 5000:
             break
         ellipse = cv2.fitEllipse(green_contour)
         rect = cv2.minAreaRect(cv2.boxPoints(ellipse))
@@ -26,6 +26,11 @@ def find_arrow(red_contours, green_contours, frame, arrow_svm):
 
         if shape[0] == 0 or shape[1] == 0 or arrow_judge(img, arrow_svm) is False:
             continue
+
+        rate = float(shape[0]) / shape[1]
+        if rate > 0.5 or rate < 0.35:
+            continue
+
         color = "green"
         contour = green_contour
         arrow_box = box
@@ -47,6 +52,10 @@ def find_arrow(red_contours, green_contours, frame, arrow_svm):
         if shape[0] == 0 or shape[1] == 0 or arrow_judge(img, arrow_svm) is False:
             continue
 
+        rate = float(shape[0]) / shape[1]
+        if rate > 0.5 or rate < 0.35:
+            continue
+            
         color = "red"
         contour = red_contour
         arrow_box = box
@@ -62,6 +71,7 @@ def arrow_judge(img, svm):
     vector = np.ravel(gray_img).astype(np.float32)
     vector = np.resize(vector, (1, 64*64))
     _, result = svm.predict(vector)
+    #return True
     if result[0] > 0:
         return True
     else:
@@ -88,13 +98,20 @@ def get_line(rect_point):
 def get_direction(contour, k, b):
     left_count = 0
     right_count = 0
-
+    max_y = 10000
     for point in contour:
+        # if point[0][1] < max_y:
+        #     max_contour = point
+        #     max_y = point[0][1]
+
         if point[0][1] * k + b < point[0][0]:
             right_count += 1
         else:
             left_count += 1
-    # print("left", left_count, right_count)
+    # if max_contour[0][1] * k + b < max_contour[0][0]:
+    #     return "right"
+    # else:
+    #     return "left"
     if left_count > right_count:
         return "left"
     else:

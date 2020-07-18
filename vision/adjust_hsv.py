@@ -62,6 +62,8 @@ def adjust_hsv(path):
         cv2.waitKey(1)
 
         while 1:
+            shape = np.shape(img);
+            print(shape, float(shape[0]) / shape[1])
             green_lower[0] = cv2.getTrackbarPos("green lower H", adjust_window)
             green_lower[1] = cv2.getTrackbarPos("green lower S", adjust_window)
             green_lower[2] = cv2.getTrackbarPos("green lower V", adjust_window)
@@ -86,16 +88,8 @@ def adjust_hsv(path):
             hsv_red2 = cv2.inRange(hsv_img, (red_lower[1], red_lower[2], red_lower[3]),
                                    (red_upper[1], red_upper[2], red_upper[3]))
             hsv_red = cv2.bitwise_or(hsv_red1, hsv_red2)
-
-            # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-            # kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-            #
-            # hsv_red = cv2.erode(hsv_red, kernel)
-            # hsv_green = cv2.erode(hsv_green, kernel)
-            #
-            # hsv_red = cv2.dilate(hsv_red, kernel2)
-            # hsv_green = cv2.dilate(hsv_green, kernel2)
-
+            # print(red_lower)
+            # print(red_upper)
             cv2.imshow("green", hsv_green)
             cv2.imshow("red", hsv_red)
 

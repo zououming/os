@@ -10,8 +10,9 @@ import judge
 
 def set_parameter():
     global hsv_flag, xml_path, collect_flag, collect_time
-    model = "car"
+    model = "test"
     frame_threshold = 6
+    com = "/dev/ttyACM"
     if len(sys.argv) > 1:
         for i in range(len(sys.argv)):
             if sys.argv[i].startswith("-"):
@@ -24,8 +25,9 @@ def set_parameter():
                     collect_flag = 1
                 elif option == "hsv":
                     hsv_flag = True
-                    # xml_path = sys.argv[i+1]
-    return model, frame_threshold
+                elif option == "com":
+                    com += sys.argv[i+1]
+    return model, frame_threshold, com
 
 def get_cnt_area(contour):
     return cv2.contourArea(contour)
@@ -45,7 +47,7 @@ def test(frame_threshold):
     while(capture.isOpened()):
         ret, frame = capture.read()
 
-        if collect_flag and time.time() - last_time >= collect_time:
+        if collect_flag and time.time() - last_time >= 1:
             img_path = "img/" + str(collect_count) + ".jpg"
             cv2.imwrite(img_path, frame)
             print("collect:",img_path)
@@ -75,15 +77,6 @@ def test(frame_threshold):
                                (red_upper[1], red_upper[2], red_upper[3]))
         hsv_red = cv2.bitwise_or(hsv_red1, hsv_red2)
 
-        # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-        # kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10, 10))
-
-        # hsv_red = cv2.erode(hsv_red, kernel)
-        # hsv_green = cv2.erode(hsv_green, kernel)
-        #
-        # hsv_red = cv2.dilate(hsv_red, kernel2)
-        # hsv_green = cv2.dilate(hsv_green, kernel2)
-
         cv2.imshow("red", hsv_red)
         cv2.imshow("green", hsv_green)
 
@@ -111,7 +104,7 @@ def test(frame_threshold):
 
         color_direction_count[index] += 1
 
-        if sum(color_direction_count) >= frame_threshold / 2:
+        if sum(color_direction_count) >= frame_threshold:
             frame_count = 0
             max_index = np.argmax(color_direction_count)
             print(max_index)
@@ -124,6 +117,7 @@ def test(frame_threshold):
 def car(frame_threshold, serial):
     global green_lower, green_upper, red_lower, red_upper, collect_flag, collect_time
     collect_count = 0
+    start_flag = False
     color_direction_count = np.zeros(4)
     color_direction_map = ["green left", "green right", "red left", "red right"]
 
@@ -134,25 +128,10 @@ def car(frame_threshold, serial):
         os.system("mkdir img")
         os.system("rm -r img/*")
 
-    frame_count = 0
     while(capture.isOpened()):
-        if sum(color_direction_count) > frame_threshold:
-            max_index = np.argmax(color_direction_count)
-            # if ser.serial_read(serial):
-            ser.serial_send(serial, str(max_index))
-            cv2.waitKey(1000)
-            if ser.serial_read(serial) or max_index >= 2:
-                for i in range(4):
-                    color_direction_count[i] = 0
-
         ret, frame = capture.read()
+        # frame = cv2.resize(frame, (320, 240))
 
-        if frame_count > frame_threshold:
-            frame_count = 0
-            print("no arrow!")
-            for i in range(4):
-                color_direction_count[i] = 0
-        # hsv_img = cv2.resize(frame, (200, 150))
         hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         hsv_green = cv2.inRange(hsv_img, (green_lower[0], green_lower[1], green_lower[2]),
@@ -164,14 +143,7 @@ def car(frame_threshold, serial):
                                (red_upper[1], red_upper[2], red_upper[3]))
         hsv_red = cv2.bitwise_or(hsv_red1, hsv_red2)
 
-        # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-        # kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-        #
-        # hsv_red = cv2.erode(hsv_red, kernel)
-        # hsv_green = cv2.erode(hsv_green, kernel)
-        #
-        # hsv_red = cv2.dilate(hsv_red, kernel2)
-        # hsv_green = cv2.dilate(hsv_green, kernel2)
+        cv2.imshow("green", hsv_green)
 
         red_contours, _ = cv2.findContours(hsv_red, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         green_contours, _ = cv2.findContours(hsv_green, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -179,7 +151,7 @@ def car(frame_threshold, serial):
         red_contours.sort(key=get_cnt_area, reverse=True)
         green_contours.sort(key=get_cnt_area, reverse=True)
 
-        color, contour, box, _ = judge.find_arrow(red_contours, green_contours, frame, arrow_svm)
+        color, contour, box, rec_img = judge.find_arrow(red_contours, green_contours, frame, arrow_svm)
 
         if len(contour) == 0:
             continue
@@ -194,24 +166,30 @@ def car(frame_threshold, serial):
             index += 1
 
         color_direction_count[index] += 1
+        max_index = np.argmax(color_direction_count)
+
+        if color_direction_count[max_index] >= frame_threshold:
+            message = ""
+            while (message != "end\n"):
+                ser.serial_send(serial, str(max_index))
+                time.sleep(0.1)
+                message = ser.serial_read(serial)
+            for i in range(4):
+                color_direction_count[i] = 0
+            if max_index > 1:
+                print("stop!")
+                break
+
+        print(color_direction_map[index])
+        cv2.waitKey(1)
 
         if collect_flag:
-            max_index = np.argmax(color_direction_count)
-            img_path = "img/" + color_direction_map[max_index] + str(collect_count) + ".jpg"
+            img_path = "img/" + color_direction_map[index] + str(collect_count) + ".jpg"
+            rec_path = "img/" + color_direction_map[index] + str(collect_count) + "rec.jpg"
+
             collect_count += 1
             cv2.imwrite(img_path, frame)
-
-        # if sum(color_direction_count) > frame_threshold:
-        #     max_index = np.argmax(color_direction_count)
-        #     # if ser.serial_read(serial):
-        #     ser.serial_send(serial, str(max_index))
-        #     if ser.serial_read(serial):
-        #         for i in range(4):
-        #             color_direction_count[i] = 0
-
-        max_index = np.argmax(color_direction_count)
-        print(color_direction_map[max_index])
-        cv2.waitKey(1)
+            cv2.imwrite(rec_path, rec_img)
 
 green_lower = [35, 43, 36]
 green_upper = [77, 255, 255]
@@ -222,7 +200,7 @@ xml_path = "./setting/hsv.xml"
 collect_flag = False
 
 if __name__ == "__main__":
-    model, frame_threshold = set_parameter()
+    model, frame_threshold, com = set_parameter()
     print("model:", model)
     print("frame threshold:", frame_threshold)
 
@@ -242,5 +220,5 @@ if __name__ == "__main__":
     if model == "test":
         test(frame_threshold)
     elif model == "car":
-        serial = ser.serial_init("/dev/ttyACM0")
+        serial = ser.serial_init(com)
         car(frame_threshold, serial)
