@@ -328,7 +328,6 @@ void setup() {
   turn_distance = now_distance[default_direction];
 }
 
-
 #ifdef SHOW_DIS
 void loop() {
   update_distance();
